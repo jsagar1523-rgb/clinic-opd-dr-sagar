@@ -248,25 +248,32 @@ function confirmDay(){
 }
 
 function exportCSV() {
-  let total = 0;
-
-  let csv = "Clinic OPD Report\n";
-  csv += "Date,Token,Patient Name,Mobile,Status,Fees\n";
+  let csv = "Date,Token,Patient Name,Mobile,Status,Fees\n";
 
   data.records.forEach(r => {
-    let d = new Date(r.date).toLocaleDateString("en-IN");
-    csv += `${d},${r.token},${r.name},${r.mobile},${r.status},${r.fees}\n`;
-    total += Number(r.fees || 0);
+    let d = r.date ? new Date(r.date) : new Date();
+
+let dd = String(d.getDate()).padStart(2, '0');
+let mm = String(d.getMonth() + 1).padStart(2, '0');
+let yyyy = d.getFullYear();
+
+let dateStr = `${dd}/${mm}/${yyyy}`;
+
+csv += `${dateStr},${r.token},${r.name},${r.mobile},${r.status},${r.fees}\n`;
+
   });
 
-  csv += "\n";
-  csv += `Total Collection,,,,,₹ ${total}`;
+  csv += `\nTotal Collection,,,,,${getTotal()}\n`;
 
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
   a.download = "clinic-report.csv";
   a.click();
 }
+
 
 
 const totalSpan=document.getElementById("total")
@@ -304,3 +311,4 @@ if (today > PAID_TILL) {
 
 </body>
 </html>
+
