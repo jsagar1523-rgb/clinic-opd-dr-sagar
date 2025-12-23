@@ -268,6 +268,15 @@ csv += `${dateStr},${r.token},${r.name},${r.mobile},${r.status},${r.fees}\n`;
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
 
+const a = document.createElement("a");
+a.href = url;
+a.download = "clinic-report.csv";
+document.body.appendChild(a);
+a.click();
+document.body.removeChild(a);
+
+  const url = URL.createObjectURL(blob);
+
   const a = document.createElement("a");
   a.href = url;
   a.download = "clinic-report.csv";
@@ -311,4 +320,5 @@ if (today > PAID_TILL) {
 
 </body>
 </html>
+
 
