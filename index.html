@@ -5,75 +5,49 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Clinic OPD</title>
 
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon-512.png">
-<meta name="theme-color" content="#0f766e">
-
 <style>
-*{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui;background:#f4f6fb;padding:10px}
-body>*{max-width:480px;margin:auto}
-h1{text-align:center;margin:12px 0}
-
 .card{background:#fff;padding:14px;border-radius:12px;margin-bottom:12px}
-input,button{width:100%;padding:10px;margin-top:8px;border-radius:8px;border:1px solid #ccc}
-button{border:none;font-weight:600;color:#fff;cursor:pointer}
-
+input,button{width:100%;padding:10px;margin-top:8px}
+button{border:none;font-weight:600;color:#fff}
 .primary{background:#2563eb}
-.collect{background:#16a34a}
-.delete{background:#dc2626}
 .export{background:#7c3aed}
 .danger{background:#b91c1c}
-
-.queue-item{background:#eef2ff;padding:8px;border-radius:8px;margin-top:6px}
-
-table{width:100%}
-tr{border-bottom:1px solid #ddd}
-td{font-size:13px;padding:4px}
-
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);align-items:center;justify-content:center}
-.popup{background:#fff;padding:16px;border-radius:10px;width:260px;text-align:center}
+.queue-item{background:#e0e7ff;padding:8px;border-radius:8px;margin-top:6px}
 </style>
 </head>
 
 <body>
 
-<h1>Clinic OPD</h1>
-
 <div class="card">
-  <input id="pname" placeholder="Patient Name">
-  <input id="pmobile" placeholder="Mobile">
-  <button class="primary" onclick="addPatient()">Generate Token</button>
+<label>Doctor Name</label>
+<input id="doctor">
 </div>
 
 <div class="card">
-  <h3>Queue</h3>
-  <div id="queue"></div>
+<h3>Add Patient</h3>
+<input id="pname" placeholder="Patient Name">
+<input id="pmobile" placeholder="Mobile">
+<button class="primary" onclick="addPatient()">Generate Token</button>
 </div>
 
 <div class="card">
-  <h3>Records</h3>
-  <table><tbody id="records"></tbody></table>
-  <p><b>Total Collection: ₹ <span id="total">0</span></b></p>
-  <button class="export" onclick="exportCSV()">Download Report</button>
+<h3>Today Queue</h3>
+<div id="queue"></div>
 </div>
 
 <div class="card">
-  <button class="danger" onclick="startNewDay()">Start New Day</button>
+<h3>Patient Records</h3>
+<div>Total Collection: ₹ <span id="total">0</span></div>
+<button class="export" onclick="exportCSV()">Download Report</button>
 </div>
 
-<!-- Fee Popup -->
-<div id="feeBox" class="overlay">
-  <div class="popup">
-    <input id="feeInput" type="number" placeholder="Enter Fees">
-    <button class="collect" onclick="confirmFee()">OK</button>
-    <button class="delete" onclick="closeFee()">Cancel</button>
-  </div>
+<div class="card">
+<button class="danger" onclick="startNewDay()">Start New Day</button>
 </div>
 
 <script>
 let data = JSON.parse(localStorage.getItem("opd")) || {token:1,records:[]}
-let feeIndex=null
 
 function save(){
   localStorage.setItem("opd",JSON.stringify(data))
@@ -81,105 +55,50 @@ function save(){
 }
 
 function addPatient(){
-  if(!pname.value.trim()) return alert("Name required")
+  if(!pname.value) return
   data.records.push({
-    date:new Date().toISOString(),
+    date:new Date().toLocaleDateString(),
     token:data.token++,
     name:pname.value,
     mobile:pmobile.value,
-    status:"Pending",
     fees:0
   })
-  pname.value="";pmobile.value=""
+  pname.value=""
+  pmobile.value=""
   save()
 }
 
 function render(){
   queue.innerHTML=""
-  records.innerHTML=""
   let total=0
-
-  data.records.forEach((r,i)=>{
-    if(r.status==="Pending"){
-      queue.innerHTML+=`<div class="queue-item">Token ${r.token} - ${r.name}</div>`
-    }
-
-    let d=new Date(r.date)
-    let dateStr=d.toLocaleDateString("en-GB")
-
-    records.innerHTML+=`
-      <tr>
-        <td>${dateStr}</td>
-        <td>${r.token}</td>
-        <td>${r.name}</td>
-        <td>${r.mobile}</td>
-        <td>${r.status}</td>
-        <td>${r.fees||"-"}</td>
-        <td>
-          ${r.status==="Pending"?`<button class="collect" onclick="openFee(${i})">Collect</button>`:""}
-          <button class="delete" onclick="deleteRow(${i})">Delete</button>
-        </td>
-      </tr>
-    `
-    if(r.status==="Paid") total+=Number(r.fees)
+  data.records.forEach(r=>{
+    queue.innerHTML+=`<div class="queue-item">Token ${r.token} - ${r.name}</div>`
+    total+=Number(r.fees||0)
   })
-  total.innerText=total
-}
-
-function openFee(i){
-  feeIndex=i
-  feeInput.value=""
-  feeBox.style.display="flex"
-}
-function closeFee(){feeBox.style.display="none"}
-function confirmFee(){
-  if(!feeInput.value) return
-  data.records[feeIndex].fees=feeInput.value
-  data.records[feeIndex].status="Paid"
-  closeFee()
-  save()
-}
-
-function deleteRow(i){
-  data.records.splice(i,1)
-  save()
-}
-
-function startNewDay(){
-  if(confirm("Delete all records?")){
-    data={token:1,records:[]}
-    save()
-  }
+  totalSpan.innerText=total
 }
 
 function exportCSV(){
-  let csv="Date,Token,Name,Mobile,Status,Fees\n"
-  let total=0
-
+  let csv="Date,Token,Name,Mobile,Fees\n"
   data.records.forEach(r=>{
-    let d=new Date(r.date).toLocaleDateString("en-GB")
-    csv+=`${d},${r.token},${r.name},${r.mobile},${r.status},${r.fees}\n`
-    if(r.status==="Paid") total+=Number(r.fees)
+    csv+=`${r.date},${r.token},${r.name},${r.mobile},${r.fees}\n`
   })
-
-  csv+=`\nTotal Collection,,,,,${total}\n`
-
   let blob=new Blob([csv],{type:"text/csv"})
   let a=document.createElement("a")
   a.href=URL.createObjectURL(blob)
   a.download="clinic-report.csv"
   a.click()
 }
-render()
-</script>
 
-<script>
-/* PAYMENT CONTROL */
-const PAID_TILL="2026-01-31"
-const today=new Date().toISOString().split("T")[0]
-if(today>PAID_TILL){
-  document.body.innerHTML="<h2 style='text-align:center'>Payment Pending</h2>"
+function startNewDay(){
+  if(confirm("Delete all data?")){
+    data={token:1,records:[]}
+    save()
+  }
 }
+
+const totalSpan=document.getElementById("total")
+render()
 </script>
 
 </body>
